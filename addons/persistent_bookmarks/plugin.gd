@@ -56,7 +56,8 @@ func _on_editor_script_changed(script) -> void:
 
 
 func _on_script_close(script) -> void:
-	save_script_bookmarks(script)
+	if script.source_code.hash() == text_edit.text.hash():
+		save_script_bookmarks(script)
 
 
 func _on_gui_focus_changed(node: Node):
