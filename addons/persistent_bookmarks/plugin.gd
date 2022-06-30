@@ -9,6 +9,8 @@ const METADATA_SECTION = "persistent_bookmark"
 var script_editor : ScriptEditor = get_editor_interface().get_script_editor()
 var text_edit : TextEdit
 
+var already_open_scripts = {}
+
 func _ready():
 	get_viewport().connect("gui_focus_changed", self, "_on_gui_focus_changed")
 	script_editor.connect("editor_script_changed", self, "_on_editor_script_changed")
@@ -40,14 +42,11 @@ func load_script_bookmarks(script):
 				[])
 
 		display_bookmarks(current_script_bookmarks)
-		prints ("Loaded bookmarks [%s] : %s" % [script.get_path(), current_script_bookmarks])
 
 
 func save_script_bookmarks(script):
 	var lines = get_bookmarked_lines()
 	if script and lines and lines.size() and text_edit_and_script_match(script):
-		prints ("Saving bookmarks [%s] : %s" % [script.get_path(), lines])
-
 		get_editor_interface().get_editor_settings().set_project_metadata(
 				METADATA_SECTION,
 				script.get_path(),
@@ -60,12 +59,18 @@ func text_edit_and_script_match(script) -> bool:
 
 # Callbacks
 func _on_editor_script_changed(script) -> void:
+	if script.get_path() in already_open_scripts:
+		# No need to load bookmarks script is already open
+		return
+
 	load_script_bookmarks(script)
+	already_open_scripts[script.get_path()] = true
 
 
 func _on_script_close(script) -> void:
 	if script and text_edit:
 		save_script_bookmarks(script)
+		already_open_scripts.erase(script.get_path())
 
 
 func _on_gui_focus_changed(node: Node):
