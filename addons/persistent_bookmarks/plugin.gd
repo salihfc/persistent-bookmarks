@@ -8,8 +8,6 @@ const METADATA_SECTION = "persistent_bookmark"
 
 var script_editor : ScriptEditor = get_editor_interface().get_script_editor()
 var text_edit : TextEdit
-var current_script_bookmarks = []
-
 
 func _ready():
 	get_viewport().connect("gui_focus_changed", self, "_on_gui_focus_changed")
@@ -17,9 +15,9 @@ func _ready():
 	script_editor.connect("script_close", self, "_on_script_close")
 
 
-func display_bookmarks():
-	if text_edit and current_script_bookmarks:
-		for bookmark_line in current_script_bookmarks:
+func display_bookmarks(script_bookmarks):
+	if text_edit and script_bookmarks:
+		for bookmark_line in script_bookmarks:
 			text_edit.set_line_as_bookmark(bookmark_line, true)
 
 
@@ -35,19 +33,29 @@ func get_bookmarked_lines() -> Array:
 
 
 func load_script_bookmarks(script):
-	current_script_bookmarks = get_editor_interface().get_editor_settings().get_project_metadata(
-			METADATA_SECTION,
-			script.get_path(),
-			[])
-	display_bookmarks()
+	if text_edit_and_script_match(script):
+		var current_script_bookmarks = get_editor_interface().get_editor_settings().get_project_metadata(
+				METADATA_SECTION,
+				script.get_path(),
+				[])
+
+		display_bookmarks(current_script_bookmarks)
+		prints ("Loaded bookmarks [%s] : %s" % [script.get_path(), current_script_bookmarks])
 
 
 func save_script_bookmarks(script):
 	var lines = get_bookmarked_lines()
-	get_editor_interface().get_editor_settings().set_project_metadata(
-			METADATA_SECTION,
-			script.get_path(),
-			lines)
+	if script and lines and lines.size() and text_edit_and_script_match(script):
+		prints ("Saving bookmarks [%s] : %s" % [script.get_path(), lines])
+
+		get_editor_interface().get_editor_settings().set_project_metadata(
+				METADATA_SECTION,
+				script.get_path(),
+				lines)
+
+
+func text_edit_and_script_match(script) -> bool:
+	return script.source_code and text_edit.text and  script.source_code.hash() == text_edit.text.hash()
 
 
 # Callbacks
@@ -56,7 +64,7 @@ func _on_editor_script_changed(script) -> void:
 
 
 func _on_script_close(script) -> void:
-	if script.source_code.hash() == text_edit.text.hash():
+	if script and text_edit:
 		save_script_bookmarks(script)
 
 
